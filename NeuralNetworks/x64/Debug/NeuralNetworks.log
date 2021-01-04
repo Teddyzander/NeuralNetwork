@@ -1,0 +1,5 @@
+﻿  neural.cpp
+F:\Visual Studio uni\NeuralNetworks\NeuralNetworks\mvector.h(27,19): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+F:\Visual Studio uni\NeuralNetworks\NeuralNetworks\neural.cpp(170,14): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+F:\Visual Studio uni\NeuralNetworks\NeuralNetworks\neural.cpp(304,1): warning C4267: '=': conversion from 'size_t' to 'unsigned int', possible loss of data
+  NeuralNetworks.vcxproj -> F:\Visual Studio uni\NeuralNetworks\x64\Debug\NeuralNetworks.exe

@@ -436,19 +436,28 @@ public:
 	}
 
 
-	static bool Test();
+	static bool Test(int test);
 	
 private:
 	// Return the activation function sigma
+	/*
+	Activation function that returns value between [-1, 1]. The more extreme the input,
+	the closer the returned value will be to 1, with extreme negatives ~ -1 and extreme
+	positives ~ 1
+	*/
 	double Sigma(double z)
 	{
-		// TODO: Return sigma(z), as defined in equation (1.4)
+		return tanh(z);
 	}
 
 	// Return the derivative of the activation function
+	/*
+	Derivative of tanh(x) = sech^2(x) = 1 / cosh^2(x)
+	*/
 	double SigmaPrime(double z)
 	{
 		// TODO: Return d/dz(sigma(z))
+		return (1.0 / pow(cosh(z), 2));
 	}
 	
 	// Loop over all weights and biases in the network and set each
@@ -531,7 +540,7 @@ private:
 
 
 
-bool Network::Test()
+bool Network::Test(int test = 0)
 {
 	// This function is a static member function of the Network class:
 	// it acts like a normal stand-alone function, but has access to private
@@ -540,7 +549,10 @@ bool Network::Test()
 	//
 	// This function should return true if all tests pass, or false otherwise
 
+	double tol = 1e-10;
+
 	// A example test of FeedForward
+	if (test == 1 || test == 0)
 	{
 		// Make a simple network with two weights and one bias
 		Network n({2, 1});
@@ -559,17 +571,95 @@ bool Network::Test()
 		// Correct value is = tanh(0.5 + (-0.3*0.3 + 0.2*0.4))
 		//                    = 0.454216432682259...
 		// Fail if error in answer is greater than 10^-10:
-		if (std::abs(n.activations[1][0] - 0.454216432682259) > 1e-10)
+		if (std::abs(n.activations[1][0] - 0.454216432682259) > tol)
 		{
+			std::cout << "FAILED: FeedForward" << std::endl;
 			return false;
 		}
 	}
+
 	
 	// TODO: for each part of the Network class that you implement,
 	//       write some more tests here to run that code and verify that
 	//       its output is as you expect.
 	//       I recommend putting each test in an empty scope { ... }, as 
     //       in the example given above.
+
+	// test activation function
+	if (test == 2 || test == 0)
+	{
+		Network n({ 2, 1 });
+
+		double result = n.Sigma(1000);
+		double expect = 1;
+
+		if (std::abs(result - expect) > tol)
+		{
+			std::cout << "FAILED: activation function, extreme positive" << std::endl;
+			return false;
+		}
+
+		result = n.Sigma(-1000);
+		expect = -1;
+
+		if (std::abs(result - expect) > tol)
+		{
+			std::cout << "FAILED: activation function, extreme negative" << std::endl;
+			return false;
+		}
+
+		result = n.Sigma(0);
+		expect = 0;
+
+		if (std::abs(result - expect) > tol)
+		{
+			std::cout << "FAILED: activation function, zero input" << std::endl;
+			return false;
+		}
+
+		result = n.Sigma(1);
+		expect = 0.7615941559557;
+
+		if (std::abs(result - expect) > tol)
+		{
+			std::cout << "FAILED: activation function, realistic positive input" << std::endl;
+			return false;
+		}
+
+		result = n.Sigma(-0.3);
+		expect = -0.29131261245159;
+
+		if (std::abs(result - expect) > tol)
+		{
+			std::cout << "FAILED: activation function, realistic negative input" << std::endl;
+			return false;
+		}
+
+	}
+
+	// test derivative of activation function
+	if (test == 3 || test == 0)
+	{
+		Network n({ 2, 1 });
+
+		double result = n.SigmaPrime(0);
+		double expect = 1;
+
+		if (std::abs(result - expect) > tol)
+		{
+			std::cout << "FAILED: activation function derivative, 0 input" << std::endl;
+			return false;
+		}
+
+		result = n.SigmaPrime(1000);
+		expect = 0;
+
+		if (std::abs(result - expect) > tol)
+		{
+			std::cout << "FAILED: activation function derivative, extreme positive" << std::endl;
+			return false;
+		}
+	}
 
 	return true;
 }
@@ -610,10 +700,11 @@ void ClassifyTestData()
 	n.ExportOutput("test_contour.txt");
 }
 
+
 int main()
 {
 	// Call the test function	
-	bool testsPassed = Network::Test();
+	bool testsPassed = Network::Test(3);
 
 	// If tests did not pass, something is wrong; end program now
 	if (!testsPassed)
@@ -622,8 +713,11 @@ int main()
 		return 1;
 	}
 
+	std::cout << "Tests passed, procede to example program...\n" << std::endl;
+
 	// Tests passed, so run our example program.
 	ClassifyTestData();
 
 	return 0;
 }
+
