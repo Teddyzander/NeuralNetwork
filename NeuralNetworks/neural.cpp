@@ -456,7 +456,6 @@ private:
 	*/
 	double SigmaPrime(double z)
 	{
-		// TODO: Return d/dz(sigma(z))
 		return (1.0 / pow(cosh(z), 2));
 	}
 	
@@ -657,6 +656,33 @@ bool Network::Test(int test = 0)
 		if (std::abs(result - expect) > tol)
 		{
 			std::cout << "FAILED: activation function derivative, extreme positive" << std::endl;
+			return false;
+		}
+
+		result = n.SigmaPrime(-1000);
+		expect = 0;
+
+		if (std::abs(result - expect) > tol)
+		{
+			std::cout << "FAILED: activation function derivative, extreme negative" << std::endl;
+			return false;
+		}
+
+		result = n.SigmaPrime(-0.8);
+		expect = 0.55905516773;
+
+		if (std::abs(result - expect) > tol)
+		{
+			std::cout << "FAILED: activation function derivative, extreme negative" << std::endl;
+			return false;
+		}
+
+		result = n.SigmaPrime(0.4);
+		expect = 0.85563878608;
+
+		if (std::abs(result - expect) > tol)
+		{
+			std::cout << "FAILED: activation function derivative, extreme negative" << std::endl;
 			return false;
 		}
 	}
