@@ -473,6 +473,25 @@ private:
 
 		// TODO: Loop over all components of all the weight matrices
 		//       and bias vectors at each relevant layer of the network.
+
+		// go through each layer (except the first)
+		for (int i = 1; i < biases.size(); i++)
+		{
+			// at each layer, the biases are a vector of values equal to the number of neurons
+			// at each layer, the weights are a matrix of values equal to the 
+			// number of neurons x number of neurons in previous layer, so we can go through
+			// these data structures simulatenously 
+
+			// set all weights in this layer
+			weights[i] = dist(rnd);
+
+			// go through all biases in this layer and set them
+			for (int j = 0; j < biases[i].size(); j++)
+			{
+				biases[i][j] = dist(rnd);
+			}
+		}
+
 	}
 
 	// Evaluate the feed-forward algorithm, setting weighted inputs and activations
@@ -687,6 +706,97 @@ bool Network::Test(int test = 0)
 		}
 	}
 
+	// test initialisation if weights and biases
+	if (test == 4 || test == 0)
+	{
+		// create a simple network
+		Network n({ 2, 3, 3, 1 });
+		double expect = 0;
+
+		// check that weights and biases are all 0 before initialisation
+		for (int i = 1; i < n.biases.size(); i++)
+		{
+			for (int j = 0; j < n.biases[i].size(); j++)
+			{
+				if (n.biases[i][j] != expect)
+				{
+					std::cout << "FAILED: weights and biases pre-initilasation, biases" << std::endl;
+					return false;
+				}
+				for (int k = 0; k < n.weights[i].Cols(); k++)
+				{
+					if (n.weights[i](j, k) != expect)
+					{
+						std::cout << "FAILED: weights and biases pre-initilasation, weights" << std::endl;
+						return false;
+					}
+				}
+			}
+		}
+
+		// initalise weights and biases to a SD of 10 and check none are 0
+		n.InitialiseWeightsAndBiases(10);
+
+		for (int i = 1; i < n.biases.size(); i++)
+		{
+			for (int j = 0; j < n.biases[i].size(); j++)
+			{
+				if (n.biases[i][j] == expect)
+				{
+					std::cout << "FAILED: weights and biases initilasation, biases" << std::endl;
+					return false;
+				}
+				for (int k = 0; k < n.weights[i].Cols(); k++)
+				{
+					if (n.weights[i](j, k) == expect)
+					{
+						std::cout << "FAILED: weights and biases initilasation, weights" << std::endl;
+						return false;
+					}
+				}
+			}
+		}
+
+		// create a new, larger network, test size of each step is correct
+		unsigned int input_size = 2;
+		unsigned int layer_size = 10;
+		unsigned int output_size = 1;
+		Network n2({ input_size, layer_size, layer_size - 1, layer_size + 1, output_size });
+		n2.InitialiseWeightsAndBiases(5);
+		int loops = 0;
+		int expected_loops = (input_size * layer_size) +
+			(layer_size * (layer_size - 1)) +
+			((layer_size - 1) * (layer_size + 1)) +
+			((layer_size + 1) * output_size);
+
+		for (int i = 1; i < n2.biases.size(); i++)
+		{
+			for (int j = 0; j < n2.biases[i].size(); j++)
+			{
+				if (abs(n2.biases[i][j]) == expect)
+				{
+					std::cout << "FAILED: weights and biases large network initilasation, biases" << std::endl;
+					return false;
+				}
+				for (int k = 0; k < n2.weights[i].Cols(); k++)
+				{
+					if (abs(n2.weights[i](j, k)) == expect)
+					{
+						std::cout << "FAILED: weights and biases large network initilasation, weights" << std::endl;
+						return false;
+					}
+					loops += 1;
+				}
+			}
+		}
+		
+		// check we have checked every value
+		if (loops != expected_loops)
+		{
+			std::cout << "FAILED: weights and biases large network initilasation, check all values" << std::endl;
+		}
+		
+	}
 	return true;
 }
 
@@ -730,7 +840,7 @@ void ClassifyTestData()
 int main()
 {
 	// Call the test function	
-	bool testsPassed = Network::Test(3);
+	bool testsPassed = Network::Test(4);
 
 	// If tests did not pass, something is wrong; end program now
 	if (!testsPassed)
