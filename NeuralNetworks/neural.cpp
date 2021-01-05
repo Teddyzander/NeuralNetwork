@@ -471,9 +471,6 @@ private:
 		// Calling "dist(rnd)" returns a random number drawn from this distribution 
 		std::normal_distribution<> dist(0, initsd);
 
-		// TODO: Loop over all components of all the weight matrices
-		//       and bias vectors at each relevant layer of the network.
-
 		// go through each layer (except the first)
 		for (int i = 1; i < biases.size(); i++)
 		{
@@ -502,6 +499,26 @@ private:
 		assert(x.size() == nneurons[0]);
 		
 		// TODO: Implement the feed-forward algorithm, equations (1.7), (1.8)
+
+		// use the set values in the activation paramater
+		// first layer is equal to the input
+		activations[0] = x;
+
+		// go through each layer, excluding the first layer
+		for (int l= 1; l < nLayers; l++)
+		{
+			int prev_l = l - 1;
+
+			// make temp vector to hold values to feed into activation function
+			MVector z(activations[l].size());
+			z = weights[l] * activations[prev_l] + biases[l];
+
+			// for each neuron in the current layer
+			for (int n = 0; n < z.size(); n++)
+			{
+				activations[l][n] = Sigma(z[n]);
+			}
+		}
 	}
 
 	// Evaluate the back-propagation algorithm, setting errors for each layer 
@@ -797,6 +814,7 @@ bool Network::Test(int test = 0)
 		}
 		
 	}
+
 	return true;
 }
 
@@ -840,7 +858,7 @@ void ClassifyTestData()
 int main()
 {
 	// Call the test function	
-	bool testsPassed = Network::Test(4);
+	bool testsPassed = Network::Test(1);
 
 	// If tests did not pass, something is wrong; end program now
 	if (!testsPassed)
@@ -852,7 +870,7 @@ int main()
 	std::cout << "Tests passed, procede to example program...\n" << std::endl;
 
 	// Tests passed, so run our example program.
-	ClassifyTestData();
+	// ClassifyTestData();
 
 	return 0;
 }
