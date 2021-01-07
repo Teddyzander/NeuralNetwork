@@ -509,14 +509,13 @@ private:
 		{
 			int prev_l = l - 1;
 
-			// make temp vector to hold values to feed into activation function
-			MVector z(activations[l].size());
-			z = weights[l] * activations[prev_l] + biases[l];
+			// get our inputs (z) for the activation function (sigma) 
+			inputs[l] = weights[l] * activations[prev_l] + biases[l];
 
-			// for each neuron in the current layer
-			for (int n = 0; n < z.size(); n++)
+			// for each neuron in the current layer put the inputs through sigma
+			for (int n = 0; n < inputs[l].size(); n++)
 			{
-				activations[l][n] = Sigma(z[n]);
+				activations[l][n] = Sigma(inputs[l][n]);
 			}
 		}
 	}
@@ -528,6 +527,31 @@ private:
 		assert(y.size() == nneurons[nLayers - 1]);
 
 		// TODO: Implement the back-propagation algorithm, equations (1.22) and (1.24)
+
+		// The error is  vector of vectors, where each layer has an error for each nueron.
+		// We must evaluate back to front, neurons to find errors for the previous neuron
+		
+		// evaluate final layer
+		inputs[nLayers - 1] = weights[nLayers - 1] * activations[nLayers - 2] + biases[nLayers - 1];
+		for (int n = 0; n < inputs[nLayers - 1].size(); n++)
+		{
+			errors[nLayers - 1][n] = SigmaPrime(inputs[nLayers - 1][n]);
+		}
+		errors[nLayers - 1] = errors[nLayers - 1] * (activations[nLayers - 1] - y);
+
+		// now we can use the final layer to propogate the errors back through the network
+		// No error associated with the input layer, so end after l == 1.
+		for (int l = nLayers - 2; l > 0; l--)
+		{
+			inputs[l] = weights[l] * activations[l - 1] + biases[l];
+
+			for (int n = 0; n < inputs[l].size(); n++)
+			{
+				errors[l][n] = SigmaPrime(inputs[l][n]);
+			}
+
+			errors[l] = errors[l] * TransposeTimes(weights[l + 1], errors[l + 1]);
+		}
 	}
 
 	
@@ -540,6 +564,15 @@ private:
 		// TODO: update the weights and biases according to the stochastic gradient
 		//       iteration, using equations (1.25) and (1.26) to evaluate
 		//       the components of grad C.
+
+		// go through each layer and update weights and biases, excluding the first layer
+
+		for (int l = 1; l < nLayers; l++)
+		{
+			biases[l] -= eta * errors[l];
+			weights[l] -= eta * OuterProduct(errors[l], activations[l - 1]);
+		}
+
 	}
 
 	
@@ -730,11 +763,12 @@ bool Network::Test(int test = 0)
 		Network n({ 2, 3, 3, 1 });
 		double expect = 0;
 
-		// check that weights and biases are all 0 before initialisation
+		// check that weights and biases are all 0 before initialisation. Display them
 		for (int i = 1; i < n.biases.size(); i++)
 		{
 			for (int j = 0; j < n.biases[i].size(); j++)
 			{
+				std::cout << "Biase: " << n.biases[i][j] << std::endl;
 				if (n.biases[i][j] != expect)
 				{
 					std::cout << "FAILED: weights and biases pre-initilasation, biases" << std::endl;
@@ -742,6 +776,7 @@ bool Network::Test(int test = 0)
 				}
 				for (int k = 0; k < n.weights[i].Cols(); k++)
 				{
+					std::cout << "Weights: " << n.weights[i](j, k) << std::endl;
 					if (n.weights[i](j, k) != expect)
 					{
 						std::cout << "FAILED: weights and biases pre-initilasation, weights" << std::endl;
@@ -774,7 +809,7 @@ bool Network::Test(int test = 0)
 			}
 		}
 
-		// create a new, larger network, test size of each step is correct
+		// create a new, larger, more complex network, test size of each step is correct
 		unsigned int input_size = 2;
 		unsigned int layer_size = 10;
 		unsigned int output_size = 1;
@@ -790,14 +825,14 @@ bool Network::Test(int test = 0)
 		{
 			for (int j = 0; j < n2.biases[i].size(); j++)
 			{
-				if (abs(n2.biases[i][j]) == expect)
+				if (abs(n2.biases[i][j] - expect) > tol)
 				{
 					std::cout << "FAILED: weights and biases large network initilasation, biases" << std::endl;
 					return false;
 				}
 				for (int k = 0; k < n2.weights[i].Cols(); k++)
 				{
-					if (abs(n2.weights[i](j, k)) == expect)
+					if (abs(n2.weights[i](j, k) - expect) > tol)
 					{
 						std::cout << "FAILED: weights and biases large network initilasation, weights" << std::endl;
 						return false;
@@ -813,6 +848,139 @@ bool Network::Test(int test = 0)
 			std::cout << "FAILED: weights and biases large network initilasation, check all values" << std::endl;
 		}
 		
+	}
+
+	// test back propogation
+	if (test == 5 || test == 0)
+	{
+		// Make a simple network with two weights and one bias
+		Network n({ 2, 1 });
+
+		// Set the values of these by hand
+		n.biases[1][0] = 0.5;
+		n.weights[1](0, 0) = -0.3;
+		n.weights[1](0, 1) = 0.2;
+
+		// applying this feed forward gives an output of 
+		// approx 0.454216432682259
+		n.FeedForward({ 0.3, 0.4 });
+
+		// check that giving 0.454216432682259 as the true value
+		// gives a VERY small error
+		n.BackPropagateError({ 0.454216432682259 });
+
+		if (std::abs(n.errors[1][0]) > tol)
+		{
+			std::cout << "FAILED: back propogation, final layer" << std::endl;
+			return false;
+		}
+
+		// check that giving |y| >> 0.454216432682259 as the true value
+		// gives a large error
+
+		n.BackPropagateError({ -99999999 });
+
+		if (std::abs(n.errors[1][0]) < 1000)
+		{
+			std::cout << "FAILED: back propogation, final layer" << std::endl;
+			return false;
+		}
+
+		// check that giving |y| = 1 as the true value
+		// gives an error of approx -0.43318
+
+		n.BackPropagateError({ 1 });
+
+		if (std::abs(n.errors[1][0] - -0.43318) > 0.00001)
+		{
+			std::cout << "FAILED: back propogation, final layer" << std::endl;
+			return false;
+		}
+	}
+
+	// test updating of weights and biases
+	if (test == 6 || test == 0)
+	{
+		// Make a simple network with two weights and one bias
+		Network n({ 2, 1 });
+
+		// Set the values of these by hand
+		n.biases[1][0] = 0.5;
+		n.weights[1](0, 0) = -0.3;
+		n.weights[1](0, 1) = 0.2;
+
+		n.UpdateWeightsAndBiases(0.5);
+
+		// since no data has beem run, errors should be all 0, so biases and weights
+		// should be unchanged
+
+		if (std::abs(n.biases[1][0] - 0.5) > tol)
+		{
+			std::cout << "FAILED: updating weights and biases, 0 error for biase" << std::endl;
+			return false;
+		}
+		if (std::abs(n.weights[1](0, 0) - -0.3) > tol)
+		{
+			std::cout << "FAILED: updating weights and biases, 0 error for weights" << std::endl;
+			return false;
+		}
+		if (std::abs(n.weights[1](0, 1) - 0.2) > tol)
+		{
+			std::cout << "FAILED: updating weights and biases, 0 error for weights" << std::endl;
+			return false;
+		}
+
+		// run the network with the exact answer in the back propogation
+		// should expect no change to weights and biases
+		// applying this feed forward gives an output of 
+		// approx 0.454216432682259
+
+		n.FeedForward({ 0.3, 0.4 });
+		n.BackPropagateError({ 0.454216432682259 });
+
+		n.UpdateWeightsAndBiases(0.1);
+
+		if (std::abs(n.biases[1][0] - 0.5) > tol)
+		{
+			std::cout << "FAILED: updating weights and biases, exact answer for biase" << std::endl;
+			return false;
+		}
+		if (std::abs(n.weights[1](0, 0) - -0.3) > tol)
+		{
+			std::cout << "FAILED: updating weights and biases, exact answer for weights" << std::endl;
+			return false;
+		}
+		if (std::abs(n.weights[1](0, 1) - 0.2) > tol)
+		{
+			std::cout << "FAILED: updating weights and biases, exact answer for weights" << std::endl;
+			return false;
+		}
+
+		// set some values for activations and errors
+
+		n.activations[0][0] = 0.1;
+		n.activations[0][1] = 0.1;
+		n.errors[1][0] = 0.1;
+		n.UpdateWeightsAndBiases(0.1);
+
+		// should epect biases to change by 0.01
+		// should expect weights to change by 0.001
+
+		if (std::abs(n.biases[1][0] - 0.49) > tol)
+		{
+			std::cout << "FAILED: updating weights and biases, small error for biase" << std::endl;
+			return false;
+		}
+		if (std::abs(n.weights[1](0, 0) - -0.301) > tol)
+		{
+			std::cout << "FAILED: updating weights and biases, small error for weights" << std::endl;
+			return false;
+		}
+		if (std::abs(n.weights[1](0, 1) - 0.199) > tol)
+		{
+			std::cout << "FAILED: updating weights and biases, small error for weights" << std::endl;
+			return false;
+		}
 	}
 
 	return true;
@@ -858,7 +1026,7 @@ void ClassifyTestData()
 int main()
 {
 	// Call the test function	
-	bool testsPassed = Network::Test(1);
+	bool testsPassed = Network::Test(6);
 
 	// If tests did not pass, something is wrong; end program now
 	if (!testsPassed)
