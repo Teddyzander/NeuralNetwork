@@ -2,6 +2,6 @@
 F:\Visual Studio uni\NeuralNetworks\NeuralNetworks\mvector.h(27,19): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
 F:\Visual Studio uni\NeuralNetworks\NeuralNetworks\neural.cpp(170,14): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
 F:\Visual Studio uni\NeuralNetworks\NeuralNetworks\neural.cpp(304,1): warning C4267: '=': conversion from 'size_t' to 'unsigned int', possible loss of data
-F:\Visual Studio uni\NeuralNetworks\NeuralNetworks\neural.cpp(508,20): warning C4018: '<': signed/unsigned mismatch
-F:\Visual Studio uni\NeuralNetworks\NeuralNetworks\neural.cpp(570,21): warning C4018: '<': signed/unsigned mismatch
+F:\Visual Studio uni\NeuralNetworks\NeuralNetworks\neural.cpp(519,20): warning C4018: '<': signed/unsigned mismatch
+F:\Visual Studio uni\NeuralNetworks\NeuralNetworks\neural.cpp(581,21): warning C4018: '<': signed/unsigned mismatch
   NeuralNetworks.vcxproj -> F:\Visual Studio uni\NeuralNetworks\x64\Debug\NeuralNetworks.exe

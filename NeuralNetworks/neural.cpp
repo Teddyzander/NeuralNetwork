@@ -368,30 +368,41 @@ public:
 		// Check that there are the same number of training data inputs as outputs
 		assert(x.size() == y.size());
 
-		// TODO: Step 2 - initialise the weights and biases with the standard deviation "initsd"
+		//initialise the weights and biases with the standard deviation "initsd"
+		InitialiseWeightsAndBiases(initsd);
 		
 		for (int iter=1; iter<=maxIterations; iter++)
 		{
 			// Step 3: Choose a random training data point i in {0, 1, 2, ..., N}
 			int i = rnd()%x.size();
 
-			// TODO: Step 4 - run the feed-forward algorithm
+			// Step 4: run the feed-forward algorithm
+			FeedForward(x[i]);
 
-			// TODO: Step 5 - run the back-propagation algorithm
+			//Step 5: run the back-propagation algorithm
+			BackPropagateError(y[i]);
 			
-			// TODO: Step 6 - update the weights and biases using stochastic gradient
+			// Step 6: update the weights and biases using stochastic gradient
 			//                with learning rate "learningRate"
+			UpdateWeightsAndBiases(learningRate);
 
 			// Every so often, perform step 7 and show an update on how the cost function has decreased
 			// Here, "every so often" means once every 1000 iterations, and also at the last iteration
 			if ((!(iter%1000)) || iter==maxIterations)
 			{
-				// TODO: Step 7(a) - calculate the total cost
+				// Step 7(a): calculate the total cost
+				Cost(y[i]);
 
 				// TODO: display the iteration number and total cost to the screen
+				std::cout << "Iteration: " << iter << "\tTotal Cost:" << Cost(y[i]) << std::endl;
 				
 				// TODO: Step 7(b) - return from this method with a value of true,
 	 			//                   indicating success, if this cost is less than "costThreshold".
+
+				if (Cost(y[i]) < costThreshold)
+				{
+					return true;
+				}
 			}
 			
 		} // Step 8: go back to step 3, until we have taken "maxIterations" steps
@@ -585,6 +596,17 @@ private:
 		assert(y.size() == nneurons[nLayers-1]);
 		
 		// TODO: Return the cost associated with this output
+		double cost = 0;
+		
+		// find L_2 of y - a^{L} x where y is the output, x is the input, 
+		//a^{L} are the activations in the final layer of neurons
+
+		for (int i = 0; i < y.size(); i++)
+		{
+			cost += std::pow(y[i] - activations[nLayers - 1][i], 2);
+		}
+
+		return 0.5 * cost;
 	}
 
 	// Return the total cost C for a set of training data x and desired outputs y
@@ -768,7 +790,6 @@ bool Network::Test(int test = 0)
 		{
 			for (int j = 0; j < n.biases[i].size(); j++)
 			{
-				std::cout << "Biase: " << n.biases[i][j] << std::endl;
 				if (n.biases[i][j] != expect)
 				{
 					std::cout << "FAILED: weights and biases pre-initilasation, biases" << std::endl;
@@ -776,7 +797,6 @@ bool Network::Test(int test = 0)
 				}
 				for (int k = 0; k < n.weights[i].Cols(); k++)
 				{
-					std::cout << "Weights: " << n.weights[i](j, k) << std::endl;
 					if (n.weights[i](j, k) != expect)
 					{
 						std::cout << "FAILED: weights and biases pre-initilasation, weights" << std::endl;
@@ -793,6 +813,7 @@ bool Network::Test(int test = 0)
 		{
 			for (int j = 0; j < n.biases[i].size(); j++)
 			{
+				std::cout << "Biase: " << n.biases[i][j] << std::endl;
 				if (n.biases[i][j] == expect)
 				{
 					std::cout << "FAILED: weights and biases initilasation, biases" << std::endl;
@@ -800,6 +821,7 @@ bool Network::Test(int test = 0)
 				}
 				for (int k = 0; k < n.weights[i].Cols(); k++)
 				{
+					std::cout << "Weights: " << n.weights[i](j, k) << std::endl;
 					if (n.weights[i](j, k) == expect)
 					{
 						std::cout << "FAILED: weights and biases initilasation, weights" << std::endl;
@@ -825,14 +847,14 @@ bool Network::Test(int test = 0)
 		{
 			for (int j = 0; j < n2.biases[i].size(); j++)
 			{
-				if (abs(n2.biases[i][j] - expect) > tol)
+				if (n2.biases[i][j] == expect)
 				{
 					std::cout << "FAILED: weights and biases large network initilasation, biases" << std::endl;
 					return false;
 				}
 				for (int k = 0; k < n2.weights[i].Cols(); k++)
 				{
-					if (abs(n2.weights[i](j, k) - expect) > tol)
+					if (n2.weights[i](j, k) == expect)
 					{
 						std::cout << "FAILED: weights and biases large network initilasation, weights" << std::endl;
 						return false;
@@ -983,6 +1005,68 @@ bool Network::Test(int test = 0)
 		}
 	}
 
+	// test Cost
+	if (test == 7 || test == 0)
+	{
+		// Make a simple network with two weights and one bias
+		Network n({ 2, 1 });
+
+		// Set the values of these by hand
+		n.biases[1][0] = 0.5;
+		n.weights[1](0, 0) = -0.3;
+		n.weights[1](0, 1) = 0.2;
+
+		n.FeedForward({ 0.3, 0.4 });
+
+		// cost should be 0
+
+		double cost = n.Cost({ 0.454216432682259 });
+		if (std::abs(cost - 0) > tol)
+		{
+			std::cout << "FAILED: Cost, simple network; exact answer" << std::endl;
+			return false;
+		}
+
+		// Make a more complex network
+		Network n2({ 2, 3, 4, 3 });
+
+		n2.FeedForward({ 0.1, 0.2 });
+		n2.activations[3][0] = 1;
+		n2.activations[3][1] = 0.5;
+		n2.activations[3][2] = 0.1;
+
+		cost = n2.Cost({ 1, 0.5, 0.1 });
+
+		// check that if output is equal to activations, cost is 0
+		if (std::abs(cost - 0) > tol)
+		{
+			std::cout << "FAILED: Cost, complex network; exact answer" << std::endl;
+			return false;
+		}
+
+		// check that if output is wrong for one neuron we get the right cost 
+		//a^L[0] is out by 0.5, so we expect cost to equal 0.5 * (1-0.5)^2
+
+		cost = n2.Cost({ 0.5, 0.5, 0.1 });
+		if (std::abs(cost - 0.125) > tol)
+		{
+			std::cout << "FAILED: Cost, complex network; one wrong neuron" << std::endl;
+			return false;
+		}
+
+		// check that the costs add up correctly if >1 are wrong
+		// first neuron cost is still 0.125
+		// second is 0.5 * (0.5 - (0.8))^2 = 0.045
+		// third is 0.5 * (0.1 - (0.9))^2 = 0.32
+		// expect cost to be 0.49
+		cost = n2.Cost({ 0.5, 0.8, 0.9 });
+		if (std::abs(cost - 0.49) > tol)
+		{
+			std::cout << "FAILED: Cost, complex network; many wrong neurons" << std::endl;
+			return false;
+		}
+
+	}
 	return true;
 }
 
@@ -1026,7 +1110,7 @@ void ClassifyTestData()
 int main()
 {
 	// Call the test function	
-	bool testsPassed = Network::Test(6);
+	bool testsPassed = Network::Test();
 
 	// If tests did not pass, something is wrong; end program now
 	if (!testsPassed)
@@ -1038,7 +1122,7 @@ int main()
 	std::cout << "Tests passed, procede to example program...\n" << std::endl;
 
 	// Tests passed, so run our example program.
-	// ClassifyTestData();
+	ClassifyTestData();
 
 	return 0;
 }
