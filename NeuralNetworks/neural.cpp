@@ -391,15 +391,16 @@ public:
 			if ((!(iter%1000)) || iter==maxIterations)
 			{
 				// Step 7(a): calculate the total cost
-				Cost(y[i]);
+				double total_cost = TotalCost(x, y);
 
-				// TODO: display the iteration number and total cost to the screen
-				std::cout << "Iteration: " << iter << "\tTotal Cost:" << Cost(y[i]) << std::endl;
+
+				// display the iteration number and total cost to the screen
+				std::cout << "Iteration: " << iter << "\tTotal Cost:" << total_cost << std::endl;
 				
-				// TODO: Step 7(b) - return from this method with a value of true,
+				// Step 7(b): return from this method with a value of true,
 	 			//                   indicating success, if this cost is less than "costThreshold".
 
-				if (Cost(y[i]) < costThreshold)
+				if (total_cost < costThreshold)
 				{
 					return true;
 				}
@@ -596,17 +597,17 @@ private:
 		assert(y.size() == nneurons[nLayers-1]);
 		
 		// TODO: Return the cost associated with this output
-		double cost = 0;
+		double c = 0;
 		
 		// find L_2 of y - a^{L} x where y is the output, x is the input, 
 		//a^{L} are the activations in the final layer of neurons
 
 		for (int i = 0; i < y.size(); i++)
 		{
-			cost += std::pow(y[i] - activations[nLayers - 1][i], 2);
+			c += std::pow(y[i] - activations[nLayers - 1][i], 2);
 		}
 
-		return 0.5 * cost;
+		return 0.5 * c;
 	}
 
 	// Return the total cost C for a set of training data x and desired outputs y
@@ -617,6 +618,16 @@ private:
 
 		// TODO: Implement the cost function, equation (1.9), using
 		//       the FeedForward(x) and Cost(y) methods
+
+		double total_cost = 0;
+
+		for (int i = 0; i < x.size(); i++)
+		{
+			FeedForward(x[i]);
+			total_cost += Cost(y[i]);
+		}
+		
+		return (1.0 / x.size()) * total_cost;
 	}
 
 	// Private member data
@@ -811,8 +822,10 @@ bool Network::Test(int test = 0)
 
 		for (int i = 1; i < n.biases.size(); i++)
 		{
+			std::cout << "For layer " << i + 1 << std::endl;
 			for (int j = 0; j < n.biases[i].size(); j++)
 			{
+				std::cout << "For neuron " << j + 1 << std::endl;
 				std::cout << "Biase: " << n.biases[i][j] << std::endl;
 				if (n.biases[i][j] == expect)
 				{
@@ -1063,6 +1076,45 @@ bool Network::Test(int test = 0)
 		if (std::abs(cost - 0.49) > tol)
 		{
 			std::cout << "FAILED: Cost, complex network; many wrong neurons" << std::endl;
+			return false;
+		}
+	}
+	// test total cost
+	if (test == 8 || test == 0)
+	{
+		// Make a simple network with two weights and one bias
+		Network n({ 2, 1 });
+
+		// set them to correct values
+		n.biases[1][0] = 0.5;
+		n.weights[1](0, 0) = -0.3;
+		n.weights[1](0, 1) = 0.2;
+		n.activations[1][0] = 0.454216432682259;
+
+		// Make a simple training data set which holds correct answers
+		// expect total cost to be almost 0
+
+		std::vector<MVector> x, y;
+		x = { { 0.3, 0.4 } };
+		y = { {0.454216432682259} };
+
+		double total_cost = n.TotalCost(x, y);
+		if (std::abs(total_cost) > tol)
+		{
+			std::cout << "FAILED: TotalCost, right input/output" << std::endl;
+			return false;
+		}
+
+		//expect total cost to be specifc value
+
+		y = { {0.40421643268225} }; //incorrect by 0.05
+		double expect = 0.00125;
+
+		total_cost = n.TotalCost(x, y);
+
+		if (std::abs(total_cost - expect) > tol)
+		{
+			std::cout << "FAILED: TotalCost, wrong input/output" << std::endl;
 			return false;
 		}
 
