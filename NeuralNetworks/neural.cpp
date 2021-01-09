@@ -1130,10 +1130,11 @@ bool Network::Test(int test = 0)
 //
 // You should make your own copies of this function and change the network parameters
 // to solve the other problems outlined in the project description.
-void ClassifyTestData()
+void ClassifyTestData(std::vector<unsigned> nneurons, std::string filename = "",
+	bool network_result = false)
 {
 	// Create a network with two input neurons, two hidden layers of three neurons, and one output neuron
-	Network n({2, 3, 3, 1});
+	Network n(nneurons);
 
 	// Get some data to train the network
 	std::vector<MVector> x, y;
@@ -1154,8 +1155,8 @@ void ClassifyTestData()
 	}
 	
 	// Generate some output files for plotting
-	ExportTrainingData(x, y, "test_points.txt");
-	n.ExportOutput("test_contour.txt");
+	ExportTrainingData(x, y, "test_points" + filename + ".txt");
+	n.ExportOutput("test_contour" + filename + ".txt");
 }
 
 
@@ -1174,7 +1175,9 @@ int main()
 	std::cout << "Tests passed, procede to example program...\n" << std::endl;
 
 	// Tests passed, so run our example program.
-	ClassifyTestData();
+	
+	std::vector<unsigned> nneurons = { 2, 3, 3, 1 };
+	ClassifyTestData(nneurons);
 
 	return 0;
 }
