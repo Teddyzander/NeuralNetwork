@@ -1255,6 +1255,7 @@ int main()
 	//ClassifyTestData(nneurons);
 	
 	// no hidden layers
+	
 	std::vector<unsigned> nneurons = {2, 1 };
 	ClassifyTestData(nneurons, "Fcheckers21", 1);
 	ClassifyTestData(nneurons, "Fspiral21", 2);
@@ -1270,7 +1271,7 @@ int main()
 
 	// two hidden layer
 
-	for (unsigned int i = 5; i < 21; i += 5)
+	for (unsigned int i = 10; i < 21; i += 5)
 	{
 		std::vector<unsigned> nneurons1 = { 2, i, i, 1 };
 		ClassifyTestData(nneurons1, "Fcheckers2" + std::to_string(i) + std::to_string(i) + "1", 1);
