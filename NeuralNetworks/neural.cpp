@@ -7,6 +7,7 @@
 #include <iostream>
 #include <fstream>
 #include <cassert>
+#include <string> 
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -192,6 +193,15 @@ inline std::ostream &operator<<(std::ostream &os, const MMatrix &a)
 	return os;
 }
 
+//struct for returning stuff needed for plots
+struct NetworkData
+{
+	bool success;
+	double eta;
+	int iterations;
+	double cost;
+};
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Functions that provide sets of training data
@@ -362,7 +372,7 @@ public:
 	
 	// Implement the training algorithm outlined in section 1.3.3
 	// This should be implemented by calling the appropriate private member functions, below
-	bool Train(const std::vector<MVector> x, const std::vector<MVector> y,
+	NetworkData Train(const std::vector<MVector> x, const std::vector<MVector> y,
 			   double initsd, double learningRate, double costThreshold, int maxIterations)
 	{
 		// Check that there are the same number of training data inputs as outputs
@@ -402,14 +412,14 @@ public:
 
 				if (total_cost < costThreshold)
 				{
-					return true;
+					return { true, learningRate, iter, total_cost };
 				}
 			}
 			
 		} // Step 8: go back to step 3, until we have taken "maxIterations" steps
 
 		// Step 9: return "false", indicating that the training did not succeed.
-		return false;
+		return { false, learningRate, maxIterations, TotalCost(x, y) };
 	}
 
 	
@@ -468,7 +478,8 @@ private:
 	*/
 	double SigmaPrime(double z)
 	{
-		return (1.0 / pow(cosh(z), 2));
+		double temp = cosh(z);
+		return (1.0 / (temp * temp));
 	}
 	
 	// Loop over all weights and biases in the network and set each
@@ -517,7 +528,7 @@ private:
 		activations[0] = x;
 
 		// go through each layer, excluding the first layer
-		for (int l= 1; l < nLayers; l++)
+		for (int l = 1; l < nLayers; l++)
 		{
 			int prev_l = l - 1;
 
@@ -544,25 +555,28 @@ private:
 		// We must evaluate back to front, neurons to find errors for the previous neuron
 		
 		// evaluate final layer
-		inputs[nLayers - 1] = weights[nLayers - 1] * activations[nLayers - 2] + biases[nLayers - 1];
+
+		MVector diff = activations[nLayers - 1] - y;
+		std::vector<MVector> temp = inputs; // temp vector for signma prime
+		
 		for (int n = 0; n < inputs[nLayers - 1].size(); n++)
 		{
-			errors[nLayers - 1][n] = SigmaPrime(inputs[nLayers - 1][n]);
+			temp[nLayers - 1][n] = SigmaPrime(inputs[nLayers - 1][n]);
 		}
-		errors[nLayers - 1] = errors[nLayers - 1] * (activations[nLayers - 1] - y);
+		
+		errors[nLayers - 1] = temp[nLayers - 1] * diff;
 
 		// now we can use the final layer to propogate the errors back through the network
 		// No error associated with the input layer, so end after l == 1.
 		for (int l = nLayers - 2; l > 0; l--)
 		{
-			inputs[l] = weights[l] * activations[l - 1] + biases[l];
 
 			for (int n = 0; n < inputs[l].size(); n++)
 			{
-				errors[l][n] = SigmaPrime(inputs[l][n]);
+				temp[l][n] = SigmaPrime(inputs[l][n]);
 			}
-
-			errors[l] = errors[l] * TransposeTimes(weights[l + 1], errors[l + 1]);
+			MVector temp2 = TransposeTimes(weights[l + 1], errors[l + 1]);
+			errors[l] = temp[l] * temp2;
 		}
 	}
 
@@ -584,7 +598,6 @@ private:
 			biases[l] -= eta * errors[l];
 			weights[l] -= eta * OuterProduct(errors[l], activations[l - 1]);
 		}
-
 	}
 
 	
@@ -1130,15 +1143,26 @@ bool Network::Test(int test = 0)
 //
 // You should make your own copies of this function and change the network parameters
 // to solve the other problems outlined in the project description.
-void ClassifyTestData(std::vector<unsigned> nneurons, std::string filename = "",
-	bool network_result = false)
+void ClassifyTestData(std::vector<unsigned> nneurons, std::string filename = "", int dataset = 0)
 {
 	// Create a network with two input neurons, two hidden layers of three neurons, and one output neuron
 	Network n(nneurons);
 
 	// Get some data to train the network
 	std::vector<MVector> x, y;
-	GetTestData(x, y);
+
+	if (dataset == 1)
+	{
+		GetCheckerboardData(x, y);
+	}
+	else if (dataset == 2)
+	{
+		GetSpiralData(x, y);
+	}
+	else
+	{
+		GetTestData(x, y);
+	}
 	
 	// Train network on training inputs x and outputs y
 	// Numerical parameters are:
@@ -1146,14 +1170,65 @@ void ClassifyTestData(std::vector<unsigned> nneurons, std::string filename = "",
 	//  learning rate = 0.1
 	//  cost threshold = 1e-4
 	//  maximum number of iterations = 10000
-	bool trainingSucceeded = n.Train(x, y, 0.1, 0.1, 1e-4, 1000000);
+
+	/*
+	// try different learning rates and see what results we get
+	double eta = 0.001;
+	std::ofstream myfile;
+	myfile.open("eta_conergence_small.txt");
+
+	while (eta <= 0.35)
+	{
+		Network n1(nneurons);
+		NetworkData trainingSucceeded = n1.Train(x, y, 0.1, eta, 1e-4, 100000);
+
+		// If training failed, report this
+		if (!trainingSucceeded.success)
+		{
+			std::cout << "Failed to converge to desired tolerance." << std::endl;
+		}
+
+		myfile << trainingSucceeded.eta << "\t" << trainingSucceeded.cost << "\t" <<
+			trainingSucceeded.iterations << std::endl;
+
+		eta += 0.001;
+	}
+	myfile.close();
+	*/
+
+	/*
+	// try different standard deviations
+	double sd = 5;
+	std::ofstream myfile;
+	myfile.open("sd_conergence_large.txt");
+
+	while (sd <= 10)
+	{
+		std::cout << "standard deviation: " << sd << std::endl;
+		Network n1(nneurons);
+		NetworkData trainingSucceeded = n1.Train(x, y, sd, 0.1, 1e-4, 100000);
+
+		// If training failed, report this
+		if (!trainingSucceeded.success)
+		{
+			std::cout << "Failed to converge to desired tolerance." << std::endl;
+		}
+
+		myfile << sd << "\t" << trainingSucceeded.cost << "\t" <<
+			trainingSucceeded.iterations << std::endl;
+
+		sd += 0.1;
+	}
+	myfile.close();
+	*/
+	NetworkData trainingSucceeded = n.Train(x, y, 0.1, 0.005, 0.01, 3000000);
 
 	// If training failed, report this
-	if (!trainingSucceeded)
+	if (!trainingSucceeded.success)
 	{
 		std::cout << "Failed to converge to desired tolerance." << std::endl;
 	}
-	
+
 	// Generate some output files for plotting
 	ExportTrainingData(x, y, "test_points" + filename + ".txt");
 	n.ExportOutput("test_contour" + filename + ".txt");
@@ -1176,9 +1251,41 @@ int main()
 
 	// Tests passed, so run our example program.
 	
-	std::vector<unsigned> nneurons = { 2, 3, 3, 1 };
-	ClassifyTestData(nneurons);
+	//std::vector<unsigned> nneurons = {2, 3, 3, 1 };
+	//ClassifyTestData(nneurons);
+	
+	// no hidden layers
+	std::vector<unsigned> nneurons = {2, 1 };
+	ClassifyTestData(nneurons, "Fcheckers21", 1);
+	ClassifyTestData(nneurons, "Fspiral21", 2);
 
+	// one hidden layer
+
+	for (unsigned int i = 5; i < 21; i += 5)
+	{
+		std::vector<unsigned> nneurons1 = { 2, i, 1 };
+		ClassifyTestData(nneurons1, "Fcheckers2" + std::to_string(i) + "1", 1);
+		ClassifyTestData(nneurons1, "Fspiral2" + std::to_string(i) + "1", 2);
+	}
+
+	// two hidden layer
+
+	for (unsigned int i = 5; i < 21; i += 5)
+	{
+		std::vector<unsigned> nneurons1 = { 2, i, i, 1 };
+		ClassifyTestData(nneurons1, "Fcheckers2" + std::to_string(i) + std::to_string(i) + "1", 1);
+		ClassifyTestData(nneurons1, "Fspiral2" + std::to_string(i) + std::to_string(i) + "1", 2);
+	}
+
+	// three hidden layer
+	for (unsigned int i = 5; i < 21; i += 5)
+	{
+		std::vector<unsigned> nneurons1 = { 2, i, i, i, 1 };
+		ClassifyTestData(nneurons1, "Fcheckers2" + std::to_string(i) +
+			std::to_string(i) + std::to_string(i) + "1", 1);
+		ClassifyTestData(nneurons1, "Fspiral2" + std::to_string(i) +
+			std::to_string(i) + std::to_string(i) + "1", 2);
+	}
 	return 0;
 }
 
