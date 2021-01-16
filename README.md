@@ -16,3 +16,11 @@ and network result as "test_contourNetwork.txt"
 
 As an example, using the spiral data set and a network of { 2, 15, 15, 15, 1 }, the following plot is the resulting network
 
+![Spiral](https://github.com/Teddyzander/NeuralNetwork/blob/master/Spiral21515151(0.06).png)
+
+This image shows that the neural network has divided the R^2 plane into two areas - areas of success (training data set = 1, white areas),
+and areas of failure (training data set = -1, black areas). It mostly matches the training data set.
+
+The same was true for the checkerboard data set
+
+![checker](https://github.com/Teddyzander/NeuralNetwork/blob/master/Checker21515151(0.02).png)
